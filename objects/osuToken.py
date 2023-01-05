@@ -453,8 +453,9 @@ class token:
 		:return:
 		"""
 		stats = userUtils.getUserStats(self.userID, self.gameMode)
-		stats_relax = userUtils.getUserStatsRx(self.userID, self.gameMode)
-		stats_ap = userUtils.getUserStatsAP(self.userID, self.gameMode)
+		stats_relax = stats
+		stats_ap = stats
+		
 		log.debug(str(stats))
 		
 		if stats is None:
