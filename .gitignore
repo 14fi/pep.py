@@ -9,3 +9,4 @@ redistest.py
 *.c
 *.so
 .pyenv
+common
