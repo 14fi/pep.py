@@ -1,0 +1,10 @@
+requests==2.25.1 
+tornado==4.4.2
+mysqlclient==2.0.3
+psutil==5.8.0
+raven==6.10.0
+bcrypt==3.2.0
+dill==0.3.3
+redis==2.10.5
+cython==0.29.23
+datadog==0.41.0
