@@ -329,8 +329,6 @@ if __name__ == "__main__":
 			"peppy:set_main_menu_icon": setMainMenuIconHandler.handler(),
 		}).start()
 
-		#tcp bancho stuff
-		#threading.Thread(target=lambda: tcpBancho.main()).start()
 		# Start tornado
 		glob.application.listen(serverPort)
 		tornado.ioloop.IOLoop.instance().start()

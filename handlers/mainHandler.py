@@ -182,9 +182,9 @@ class handler(requestsManager.asyncRequestHandler):
 							if not userToken.restricted or (userToken.restricted and packetID in packetsRestricted):
 								eventHandler[packetID]()
 							else:
-								log.warning("Ignored packet id from {} ({}) (user is restricted)".format(requestTokenString, packetID))
+								log.info("Ignored packet id from {} ({}) (user is restricted)".format(requestTokenString, packetID))
 						else:
-							log.warning("Unknown packet id from {} ({})".format(requestTokenString, packetID))
+							log.info("Unknown packet id from {} ({})".format(requestTokenString, packetID))
 
 					# Update pos so we can read the next stacked packet
 					# +7 because we add packet ID bytes, unused byte and data length bytes
@@ -197,7 +197,7 @@ class handler(requestsManager.asyncRequestHandler):
 			except exceptions.tokenNotFoundException:
 				# Token not found. Disconnect that user
 				responseData = serverPackets.loginError()
-				log.warning("Received packet from unknown token ({}).".format(requestTokenString))
+				log.info("Received packet from unknown token ({}).".format(requestTokenString))
 				log.info("{} has been disconnected (invalid token)".format(requestTokenString))
 			finally:
 				# Unlock token
