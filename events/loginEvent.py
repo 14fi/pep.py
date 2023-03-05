@@ -135,9 +135,9 @@ def handle(tornadoRequest):
 		date3 = present.strftime('%d/%m/%Y')
 		passed = date2 < date3
 		if frozen and passed == False:
-				responseToken.enqueue(serverPackets.notification(f"The osuHOW staff team has found you suspicious and would like to request a liveplay. You have until {readabledate} (UTC) to provide a liveplay to the staff team. This can be done via the osuHOW Discord server. Failure to provide a valid liveplay will result in your account being automatically restricted."))
+				responseToken.enqueue(serverPackets.notification(f"The 14fi staff team has found you suspicious and would like to request a liveplay. You have until {readabledate} (UTC) to provide a liveplay to the staff team. This can be done via the 14fi Discord server. Failure to provide a valid liveplay will result in your account being automatically restricted."))
 		elif frozen and passed == True:
-				responseToken.enqueue(serverPackets.notification("Your window for liveplay sumbission has expired! Your account has been restricted as per our cheating policy. Please contact staff for more information on what can be done. This can be done via the osuHOW Discord server."))
+				responseToken.enqueue(serverPackets.notification("Your window for liveplay sumbission has expired! Your account has been restricted as per our cheating policy. Please contact staff for more information on what can be done. This can be done via the 14fi Discord server."))
 				userUtils.restrict(responseToken.userID)
 
 		#we thank unfrozen people
@@ -146,10 +146,6 @@ def handle(tornadoRequest):
 		if not frozen and first:
 			responseToken.enqueue(serverPackets.notification("Thank you for providing a liveplay! You have proven your legitemacy and have subsequently been unfrozen."))
 			glob.db.execute(f"UPDATE users SET firstloginafterfrozen = 0 WHERE id = %s", [userID])
-
-		# Deprecate telegram 2fa and send alert
-		#if userUtils.deprecateTelegram2Fa(userID):
-		#	responseToken.enqueue(serverPackets.notification("As stated on our blog, Telegram 2FA has been deprecated on 29th June 2018. Telegram 2FA has just been disabled from your account. If you want to keep your account secure with 2FA, please enable TOTP-based 2FA from our website https://ripple.moe. Thank you for your patience."))
 
 		# Set silence end UNIX time in token
 		responseToken.silenceEndTime = userUtils.getSilenceEnd(userID)
@@ -174,13 +170,9 @@ def handle(tornadoRequest):
 			raise exceptions.banchoRestartingException()
 
 		# Send login notification before maintenance message
-		#if glob.banchoConf.config["loginNotification"] != "":
-
-		#creating notification
-		OnlineUsers = int(glob.redis.get("ripple:online_users").decode("utf-8"))
-		Notif = f"""- Online Users: {OnlineUsers}
-		- {random.choice(glob.banchoConf.config['Quotes'])}"""
-		responseToken.enqueue(serverPackets.notification(Notif))
+		login_notification = glob.db.fetch("SELECT value_string FROM bancho_settings WHERE name = 'login_notification'")["value_string"]
+		if login_notification != "":
+			responseToken.enqueue(serverPackets.notification(login_notification))
 
 		# Maintenance check
 		if glob.banchoConf.config["banchoMaintenance"]:
@@ -196,78 +188,41 @@ def handle(tornadoRequest):
 		login_flags: list[str] = []
 		#was it serious enough to restrict the user?
 		restrict_user = False
+		#should we prevent the user from logging in?
+		stop_login = False
+
+		if "b20140628.6" not in osuVersion:
+			login_flags.append(f"Client has unknown version, hash:{osuhash}, version:{osuVersion}")
+			stop_login = True
+			responseToken.enqueue(serverPackets.notification("Incorrect osu! version, please use the 14fi client!"))
 
 		if glob.conf.extra["mode"]["anticheat"] and not restricted:
 			osuhash = str(clientData[0])
-			osuver2 = str(tornadoRequest.request.headers.get("osu-version"))
-			if osuver2 != "None" and osuVersion != osuver2: #for backwards compatibility with old clients
-				login_flags.append(f"Conflicting version numbers, header:{osuver2}, sent data:{osuVersion}, client hash:{osuhash}")
 
-			clienthash = glob.db.fetch("SELECT * FROM client_hashes WHERE osuver = %s LIMIT 1", [osuVersion])
 			clientmodallowed = glob.db.fetch("SELECT clientmodallowed FROM users WHERE id = %s LIMIT 1", [userID])
 			clientmodallowed = int(clientmodallowed["clientmodallowed"])
 
-			try:
-				clienthash = str(clienthash["hash"])
-			except:
-				clienthash = "none"
+			badhashes = glob.db.fetchAll("SELECT * FROM client_hashes ORDER BY id DESC")
+			good_hash = 0
 
-			if clienthash != osuhash and clienthash != "none":
-				login_flags.append(f"Incorrect client hash: osuver:{osuVersion}, hash:{osuhash}")
-
-			if "dev" in osuver2 or "dev" in osuVersion or "public_test" in osuver2 or "public_test" in osuVersion:
-				login_flags.append(f"osu!dev in use, osuver:{osuVersion}, client hash:{osuhash}")
-
-			badhashes = glob.db.fetchAll("SELECT * FROM bad_client_hashes")
-			#detect clients with a banned hash
 			for hash in badhashes:
 				hash = hash["hash"]
 				if osuhash == hash:
-					#TODO: delay ban
-					login_flags.append(f"Client has banned hash, hash:{osuhash}")
+					good_hash = 1
+					break
 
-			# Ainu Client 2020 update
-			if tornadoRequest.request.headers.get("ainu") == "happy":
-				login_flags.append("Ainu Client 2020 (happy new year!) in use.")
-				restrict_user = True
+			if good_hash != 1:
+				login_flags.append(f"Client has unknown hash, hash:{osuhash}")
 
-			# Ainu Client 2019,
-			elif osuVersion in ["0Ainu", "b20190401.22f56c084ba339eefd9c7ca4335e246f80"]:
-				login_flags.append(f"Ainu Client in use, osuver:{osuver2}")
-				restrict_user = True
+		if login_flags != [] and clientmodallowed != 1:
+			log.warning('\n\n'.join([
+				f'[{username}](https://14fi-web.tanza.me/u/{userID}) was flagged during login.',
+				'**Breakdown**\n' + '\n'.join(login_flags),
+				'User was not allowed to log in.' if stop_login == True else ''
+			]), discord='ac')
+			if stop_login == True:
+				return
 
-			#elif osuVersion in ["b20190326.2", "b20191223.3"]:
-			#don't care about this one because they're just gonna get flagged on score sub anyways.
-
-			# hqOsu
-			elif osuVersion == "b20190226.2":
-				login_flags.append("hqOsu potentially in use, but the client has the same osuver as a legit client, so maybe not.")
-			
-			#hqosu legacy
-			elif osuVersion == "b20190716.5":
-				login_flags.append("hqOsu legacy potentially in use, but the client has the same osuver as a legit client, so maybe not.")
-
-			elif tornadoRequest.request.headers.get("a") == "@_@_@_@_@_@_@_@___@_@_@_@___@_@___@":
-				login_flags.append(f"Aoba's private cheat in use, osuver:{osuver2}")
-				restrict_user = True
-
-			elif osuVersion.startswith("skoot"):
-				log.info(f"Account {userID} tried to skooooot!!!!")
-				login_flags.append("skoooot in use, oyoyoyoyoyoyoyoyoy")
-				restrict_user = True
-
-			elif osuVersion[0] != "b":
-				login_flags.append(f"osuver dosen't begin with b, osuver:{osuver2}")
-
-			if restrict_user == True:
-				userUtils.restrict(userID)
-
-			if login_flags != []:
-				log.warning('\n\n'.join([
-					f'[{username}](https://osuhow.cf/u/{userID}) was flagged during login.',
-					'**Breakdown**\n' + '\n'.join(login_flags),
-					'User has been restricted.' if restrict_user == True else ''
-				]), discord='ac')
 
 
 		# Check restricted mode (and eventually send message)

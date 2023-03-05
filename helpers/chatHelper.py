@@ -50,16 +50,16 @@ def joinChannel(userID = 0, channel = "", token = None, toIRC = True, force=Fals
 		# IRC code return
 		return 0
 	except exceptions.channelNoPermissionsException:
-		log.warning("{} attempted to join channel {}, but they have no read permissions".format(token.username, channel))
+		log.info("{} attempted to join channel {}, but they have no read permissions".format(token.username, channel))
 		return 403
 	except exceptions.channelUnknownException:
-		log.warning("{} attempted to join an unknown channel ({})".format(token.username, channel))
+		log.info("{} attempted to join an unknown channel ({})".format(token.username, channel))
 		return 403
 	except exceptions.userAlreadyInChannelException:
-		log.warning("User {} already in channel {}".format(token.username, channel))
+		log.info("User {} already in channel {}".format(token.username, channel))
 		return 403
 	except exceptions.userNotFoundException:
-		log.warning("User not connected to IRC/Bancho")
+		log.info("User not connected to IRC/Bancho")
 		return 403	# idk
 
 def partChannel(userID = 0, channel = "", token = None, toIRC = True, kick = False, force=False):
@@ -139,13 +139,13 @@ def partChannel(userID = 0, channel = "", token = None, toIRC = True, kick = Fal
 		# Return IRC code
 		return 0
 	except exceptions.channelUnknownException:
-		log.warning("{} attempted to part an unknown channel ({})".format(token.username, channel))
+		log.info("{} attempted to part an unknown channel ({})".format(token.username, channel))
 		return 403
 	except exceptions.userNotInChannelException:
-		log.warning("{} attempted to part {}, but he's not in that channel".format(token.username, channel))
+		log.info("{} attempted to part {}, but he's not in that channel".format(token.username, channel))
 		return 442
 	except exceptions.userNotFoundException:
-		log.warning("User not connected to IRC/Bancho")
+		log.info("User not connected to IRC/Bancho")
 		return 442	# idk
 
 def sendMessage(fro = "", to = "", message = "", token = None, toIRC = True):
@@ -324,31 +324,31 @@ def sendMessage(fro = "", to = "", message = "", token = None, toIRC = True):
 		return 0
 	except exceptions.userSilencedException:
 		token.enqueue(serverPackets.silenceEndTime(token.getSilenceSecondsLeft()))
-		log.warning("{} tried to send a message during silence".format(token.username))
+		log.info("{} tried to send a message during silence".format(token.username))
 		return 404
 	except exceptions.channelModeratedException:
-		log.warning("{} tried to send a message to a channel that is in moderated mode ({})".format(token.username, to))
+		log.info("{} tried to send a message to a channel that is in moderated mode ({})".format(token.username, to))
 		return 404
 	except exceptions.channelUnknownException:
-		log.warning("{} tried to send a message to an unknown channel ({})".format(token.username, to))
+		log.info("{} tried to send a message to an unknown channel ({})".format(token.username, to))
 		return 403
 	except exceptions.channelNoPermissionsException:
-		log.warning("{} tried to send a message to channel {}, but they have no write permissions".format(token.username, to))
+		log.info("{} tried to send a message to channel {}, but they have no write permissions".format(token.username, to))
 		return 404
 	except exceptions.userRestrictedException:
-		log.warning("{} tried to send a message {}, but the recipient is in restricted mode".format(token.username, to))
+		log.info("{} tried to send a message {}, but the recipient is in restricted mode".format(token.username, to))
 		return 404
 	except exceptions.userTournamentException:
-		log.warning("{} tried to send a message {}, but the recipient is a tournament client".format(token.username, to))
+		log.info("{} tried to send a message {}, but the recipient is a tournament client".format(token.username, to))
 		return 404
 	except exceptions.userNotFoundException:
-		log.warning("User not connected to IRC/Bancho")
+		log.info("User not connected to IRC/Bancho")
 		return 401
 	except exceptions.userBlockingDMsException:
-		log.warning(f'{token.username} tried to send a message to {to}, but the recipient is blocking non-friends dms.')
+		log.info(f'{token.username} tried to send a message to {to}, but the recipient is blocking non-friends dms.')
 		return 404
 	except exceptions.invalidArgumentsException:
-		log.warning("{} tried to send an invalid message to {}".format(token.username, to))
+		log.info("{} tried to send an invalid message to {}".format(token.username, to))
 		return 404
 
 
@@ -389,7 +389,7 @@ def IRCConnect(username):
 	"""
 	userID = userUtils.getID(username)
 	if not userID:
-		log.warning("{} doesn't exist".format(username))
+		log.info("{} doesn't exist".format(username))
 		return
 	glob.tokens.deleteOldTokens(userID)
 	glob.tokens.addToken(userID, irc=True)
@@ -405,7 +405,7 @@ def IRCDisconnect(username):
 	"""
 	token = glob.tokens.getTokenFromUsername(username)
 	if token is None:
-		log.warning("{} doesn't exist".format(username))
+		log.info("{} doesn't exist".format(username))
 		return
 	logoutEvent.handle(token)
 	log.info("{} disconnected from IRC".format(username))
@@ -419,7 +419,7 @@ def IRCJoinChannel(username, channel):
 	"""
 	userID = userUtils.getID(username)
 	if not userID:
-		log.warning("{} doesn't exist".format(username))
+		log.info("{} doesn't exist".format(username))
 		return
 	# NOTE: This should have also `toIRC` = False` tho,
 	# since we send JOIN message later on ircserver.py.
@@ -435,7 +435,7 @@ def IRCPartChannel(username, channel):
 	"""
 	userID = userUtils.getID(username)
 	if not userID:
-		log.warning("{} doesn't exist".format(username))
+		log.info("{} doesn't exist".format(username))
 		return
 	return partChannel(userID, channel)
 
@@ -448,7 +448,7 @@ def IRCAway(username, message):
 	"""
 	userID = userUtils.getID(username)
 	if not userID:
-		log.warning("{} doesn't exist".format(username))
+		log.info("{} doesn't exist".format(username))
 		return
 	glob.tokens.getTokenFromUserID(userID).awayMessage = message
 	return 305 if message == "" else 306

@@ -2,6 +2,7 @@
 This file has been _rewritten_ taking by reference code from
 miniircd (https://github.com/jrosdahl/miniircd)
 by Joel Rosdahl, licensed under the GNU GPL 2 License.
+
 Most of the reference code from miniircd was used for the low-level logic.
 The high-level code has been rewritten to make it compatible with pep.py.
 """
@@ -27,6 +28,7 @@ class Client:
 	def __init__(self, server, sock):
 		"""
 		Initialize a Client object
+
 		:param server: server object
 		:param sock: socket connection object
 		:return:
@@ -56,6 +58,7 @@ class Client:
 		"""
 		Add a message (basic string) to client buffer.
 		This is the lowest possible level.
+
 		:param msg: message to add
 		:return:
 		"""
@@ -65,6 +68,7 @@ class Client:
 	def writeBufferSize(self):
 		"""
 		Return this client's write buffer size
+
 		:return: write buffer size
 		"""
 		return len(self.__writebuffer)
@@ -73,6 +77,7 @@ class Client:
 	def reply(self, msg):
 		"""
 		Add an IRC-like message to client buffer.
+
 		:param msg: message (without IRC stuff)
 		:return:
 		"""
@@ -82,6 +87,7 @@ class Client:
 	def replyCode(self, code, message, nickname="", channel=""):
 		"""
 		Add an IRC-like message to client buffer with code
+
 		:param code: response code
 		:param message: response message
 		:param nickname: receiver nickname
@@ -98,6 +104,7 @@ class Client:
 	def reply403(self, channel):
 		"""
 		Add a 403 reply (no such channel) to client buffer.
+
 		:param channel:
 		:return:
 		"""
@@ -107,6 +114,7 @@ class Client:
 	def reply461(self, command):
 		"""
 		Add a 461 reply (not enough parameters) to client buffer
+
 		:param command: name of the command that had not enough parameters
 		:return:
 		"""
@@ -116,6 +124,7 @@ class Client:
 	def disconnect(self, quitmsg = "Client quit", callLogout = True):
 		"""
 		Disconnects this client from the IRC server
+
 		:param quitmsg: IRC quit message. Default: 'Client quit'
 		:param callLogout: if True, call logoutEvent on bancho
 		:return:
@@ -136,6 +145,7 @@ class Client:
 	def readSocket(self):
 		"""
 		Read data coming from this client socket
+
 		:return:
 		"""
 		try:
@@ -162,6 +172,7 @@ class Client:
 	def parseBuffer(self):
 		"""
 		Parse self.__readbuffer, get command, arguments and call its handler
+
 		:return:
 		"""
 		# Get lines from buffer
@@ -202,6 +213,7 @@ class Client:
 	def writeSocket(self):
 		"""
 		Write buffer to socket
+
 		:return:
 		"""
 		try:
@@ -215,6 +227,7 @@ class Client:
 		"""
 		Check if this client is still connected.
 		If the client is dead, disconnect it.
+
 		:return:
 		"""
 		now = time.time()
@@ -234,6 +247,7 @@ class Client:
 	def sendLusers(self):
 		"""
 		Send lusers response to this client
+
 		:return:
 		"""
 		self.replyCode(251, "There are {} users and 0 services on 1 server".format(len(glob.tokens.tokens)))
@@ -241,6 +255,7 @@ class Client:
 	def sendMotd(self):
 		"""
 		Send MOTD to this client
+
 		:return:
 		"""
 		self.replyCode(375, "- {} Message of the day - ".format(self.server.host))
@@ -283,41 +298,36 @@ class Client:
 		"""NICK and USER commands handler"""
 		if command == "NICK":
 			if len(arguments) < 1:
-				log.info("irc: no nick")
 				self.reply("431 :No nickname given")
 				return
 			nick = arguments[0]
 
 			# Make sure this is the first time we set our nickname
 			if self.IRCUsername != "":
-				log.info("bad nick")
 				self.reply("432 * %s :Erroneous nickname" % nick)
 				return
 
 			# Make sure the IRC token was correct:
 			# (self.supposedUsername is already fixed for IRC)
 			if nick.lower() != self.supposedUsername.lower():
-				log.info("bad pass")
 				self.reply("464 :Password incorrect")
 				return
 
 			# Make sure that the user is not banned/restricted:
 			if not userUtils.isAllowed(self.supposedUserID):
-				log.info("irc: banned")
 				self.reply("465 :You're banned")
 				return
 
 			# Make sure we are not connected to Bancho
 			token = glob.tokens.getTokenFromUsername(chat.fixUsernameForBancho(nick), True)
 			if token is not None:
-				log.info("irc: nick in use")
 				self.reply("433 * {} :Nickname is already in use".format(nick))
 				return
 
 			# Everything seems fine, set username (nickname)
 			self.IRCUsername = nick	# username for IRC
 			self.banchoUsername = chat.fixUsernameForBancho(self.IRCUsername)	# username for bancho
-			log.info("irc: good")
+
 			# Disconnect other IRC clients from the same user
 			for _, value in self.server.clients.items():
 				if value.IRCUsername.lower() == self.IRCUsername.lower() and value != self:
@@ -560,6 +570,7 @@ class Server:
 	def forceDisconnection(self, username, isBanchoUsername=True):
 		"""
 		Disconnect someone from IRC if connected
+
 		:param username: victim
 		:param isBanchoUsername: if True, username is a bancho username, else convert it to a bancho username
 		:return:
@@ -572,6 +583,7 @@ class Server:
 	def banchoJoinChannel(self, username, channel):
 		"""
 		Let every IRC client connected to a specific client know that 'username' joined the channel from bancho
+
 		:param username: username of bancho user
 		:param channel: joined channel name
 		:return:
@@ -584,6 +596,7 @@ class Server:
 	def banchoPartChannel(self, username, channel):
 		"""
 		Let every IRC client connected to a specific client know that 'username' parted the channel from bancho
+
 		:param username: username of bancho user
 		:param channel: joined channel name
 		:return:
@@ -596,6 +609,7 @@ class Server:
 	def banchoMessage(self, fro, to, message):
 		"""
 		Send a message to IRC when someone sends it from bancho
+
 		:param fro: sender username
 		:param to: receiver username
 		:param message: text of the message
@@ -618,6 +632,7 @@ class Server:
 	def removeClient(self, client, _):
 		"""
 		Remove a client from connected clients
+
 		:param client: client object
 		:return:
 		"""
@@ -627,6 +642,7 @@ class Server:
 	def start(self):
 		"""
 		Start IRC server main loop
+
 		:return:
 		"""
 		# Sentry
@@ -688,6 +704,7 @@ class Server:
 def main(port=6667):
 	"""
 	Create and start an IRC server
+
 	:param port: IRC port. Default: 6667
 	:return:
 	"""
