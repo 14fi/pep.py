@@ -111,3 +111,6 @@ class wrongChannelException(Exception):
 
 class periodicLoopException(Exception):
 	pass
+
+class userBlockingDMsException(Exception):
+	pass
